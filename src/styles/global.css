@@ -1,0 +1,37 @@
+/* 🔹 Reset base limpio */
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  padding: 0;
+  font-family: 'Poppins', sans-serif;
+  background-color: #f4f6f8;
+  overflow-x: hidden;
+}
+
+/* 🔹 Inputs cómodos en móvil */
+input, select, textarea {
+  width: 100%;
+  padding: 12px;
+  font-size: 16px; /* evita zoom automático en iPhone */
+  border-radius: 8px;
+  border: 1px solid #ccc;
+  margin-bottom: 10px;
+}
+
+/* 🔹 Botones estilo app */
+button {
+  width: 100%;
+  padding: 14px;
+  font-size: 16px;
+  border-radius: 10px;
+  border: none;
+  cursor: pointer;
+  transition: 0.2s ease;
+}
+
+button:active {
+  transform: scale(0.98);
+}

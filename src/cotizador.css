@@ -1,0 +1,237 @@
+:root {
+  --amarillo: #f4b400;
+  --amarillo-oscuro: #d89c00;
+  --negro: #1a1a1a;
+  --gris-claro: #f4f6f8;
+  --gris-borde: #e0e0e0;
+  --blanco: #ffffff;
+}
+
+/* Reset limpio */
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+  font-family: "Segoe UI", Roboto, Arial, sans-serif;
+}
+
+body {
+  background-color: var(--negro);
+}
+
+/* Contenedor principal */
+.contenedor {
+  max-width: 1200px;
+  margin: 40px auto;
+  background: var(--blanco);
+  border-radius: 12px;
+  box-shadow: 0 10px 30px rgba(0,0,0,0.08);
+  padding: 40px;
+}
+
+/* Header corporativo */
+.header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 30px;
+  padding-bottom: 20px;
+  border-bottom: 3px solid var(--amarillo);
+}
+
+.header h1 {
+  color: var(--negro);
+  font-size: 26px;
+  font-weight: 700;
+}
+
+.header span {
+  color: var(--amarillo-oscuro);
+  font-weight: 600;
+}
+
+/* Botones */
+.boton {
+  background: var(--negro);
+  color: var(--blanco);
+  border: none;
+  padding: 10px 18px;
+  border-radius: 6px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: 0.3s;
+}
+
+.boton:hover {
+  background: var(--amarillo);
+  color: var(--negro);
+}
+
+.boton-primario {
+  background: var(--amarillo);
+  color: var(--negro);
+}
+
+.boton-primario:hover {
+  background: var(--amarillo-oscuro);
+}
+
+/* Secciones */
+.seccion {
+  margin-bottom: 30px;
+}
+
+.seccion h3 {
+  margin-bottom: 10px;
+  color: var(--negro);
+  border-left: 4px solid var(--amarillo);
+  padding-left: 10px;
+  font-size: 18px;
+}
+
+/* Inputs */
+input, textarea {
+  width: 100%;
+  padding: 8px 10px;
+  border: 1px solid var(--gris-borde);
+  border-radius: 6px;
+  margin-bottom: 10px;
+  transition: 0.2s;
+}
+
+input:focus, textarea:focus {
+  outline: none;
+  border-color: var(--amarillo);
+}
+
+/* Tabla elegante */
+table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 15px;
+  font-size: 14px;
+}
+
+thead {
+  background: var(--negro);
+  color: var(--amarillo);
+}
+
+th, td {
+  padding: 10px;
+  border-bottom: 1px solid var(--gris-borde);
+  text-align: center;
+}
+
+tbody tr:hover {
+  background-color: #fafafa;
+}
+
+/* Resumen financiero */
+.resumen {
+  background: #000000;
+  border: 1px solid var(--negro);
+  padding: 20px;
+  border-radius: 10px;
+}
+
+.resumen h4 {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 6px;
+  font-weight: 500;
+}
+
+.total-final {
+  font-size: 22px;
+  font-weight: 700;
+  color: var(--negro);
+  border-top: 2px solid var(--amarillo);
+  padding-top: 10px;
+  margin-top: 10px;
+}
+
+/* Historial */
+.historial {
+  background: #fff9e6;
+  border: 1px solid #ffe08a;
+  padding: 15px;
+  border-radius: 8px;
+  margin-bottom: 25px;
+}
+
+.historial li {
+  margin-bottom: 8px;
+}
+
+/* 🔹 Botón agregar item versión táctil */
+.boton-item {
+  display: inline-block;
+  padding: 12px 20px;
+  font-size: 15px;
+  font-weight: 600;
+  border-radius: 10px;
+  border: 2px solid var(--amarillo);
+  background-color: var(--blanco);
+  color: var(--negro);
+  cursor: pointer;
+  transition: all 0.2s ease;
+  margin-top: 10px;
+}
+
+.boton-item:hover {
+  background-color: var(--amarillo);
+  color: var(--negro);
+}
+
+/* Efecto táctil */
+.boton-item:active {
+  transform: scale(0.97);
+}
+
+/* 🔹 Mejor experiencia en móvil */
+@media (max-width: 768px) {
+  .boton-item {
+    width: 100%;
+    padding: 16px;
+    font-size: 16px;
+  }
+}
+
+.opciones-movil {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: 15px;
+}
+
+.toggle {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 14px;
+  border-radius: 10px;
+  border: 2px solid #ccc;
+  font-weight: bold;
+  cursor: pointer;
+  user-select: none;
+  transition: all 0.2s ease;
+  background-color: #f5f5f5;
+}
+
+.toggle input {
+  display: none;
+}
+
+.toggle.activo {
+  background-color: #ffd000;
+  border-color: #000;
+  color: #000;
+}
+
+@media (min-width: 768px) {
+  .opciones-movil {
+    flex-direction: row;
+    flex-wrap: wrap;
+  }
+}
