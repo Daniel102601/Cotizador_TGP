@@ -1,4 +1,4 @@
-import cotizador from "./pages/cotizador"
+import Cotizador from "./pages/cotizador"
 
 function App() {
   return <Cotizador />

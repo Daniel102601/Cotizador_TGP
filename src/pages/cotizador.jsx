@@ -2,7 +2,7 @@ import { useState, useEffect } from "react"
 import jsPDF from "jspdf"
 import html2canvas from "html2canvas"
 import "../cotizador.css"
-import CotizacionPDF from "./CotizacionPDF"
+import cotizacionpdf from "./cotizacionpdf"
 
 function Cotizador() {
 
