@@ -61,6 +61,14 @@ function Cotizador() {
     setItems([...items, { descripcion: "", cantidad: 1, valorUnitario: 0 }])
   }
 
+  // NUEVA FUNCIÓN: Inserta un ítem justo debajo del índice seleccionado
+  const insertarItemAbajo = (index) => {
+    const nuevosItems = [...items]
+    // splice modifica el arreglo insertando un nuevo elemento en la posición index + 1
+    nuevosItems.splice(index + 1, 0, { descripcion: "", cantidad: 1, valorUnitario: 0 })
+    setItems(nuevosItems)
+  }
+
   const eliminarItem = (index) => {
     setItems(items.filter((_, i) => i !== index))
   }
@@ -359,7 +367,7 @@ function Cotizador() {
               <th>Cant</th>
               <th>V. Unit</th>
               <th>V. Total</th>
-              <th></th>
+              <th>Acciones</th>
             </tr>
           </thead>
           <tbody>
@@ -390,8 +398,23 @@ function Cotizador() {
                   />
                 </td>
                 <td style={{ whiteSpace: "nowrap" }}>{formatoMoneda(calcularTotalItem(item))}</td>
-                <td>
-                  <button className="boton-item" onClick={() => eliminarItem(index)}>X</button>
+                <td style={{ whiteSpace: "nowrap", textAlign: "center" }}>
+                  <button 
+                    className="boton-item" 
+                    title="Insertar ítem abajo"
+                    onClick={() => insertarItemAbajo(index)}
+                    style={{ marginRight: "5px", padding: "5px 10px", backgroundColor: "#4caf50", color: "white", border: "none", borderRadius: "4px" }}
+                  >
+                    +
+                  </button>
+                  <button 
+                    className="boton-item" 
+                    title="Eliminar este ítem"
+                    onClick={() => eliminarItem(index)}
+                    style={{ padding: "5px 10px", backgroundColor: "#d32f2f", color: "white", border: "none", borderRadius: "4px" }}
+                  >
+                    X
+                  </button>
                 </td>
               </tr>
             ))}
@@ -399,7 +422,7 @@ function Cotizador() {
         </table>
 
         <br />
-        <button className="boton-item" onClick={agregarItem}>Agregar Ítem</button>
+        <button className="boton-item" onClick={agregarItem}>Agregar Ítem al Final</button>
 
         <hr />
 
