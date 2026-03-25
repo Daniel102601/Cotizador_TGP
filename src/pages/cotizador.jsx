@@ -411,7 +411,7 @@ function Cotizador() {
           )}
 
           {aplicarAdministracion && aplicarImprevistos && (
-            <h4>Imprevistos (4% sobre administración): {formatoMoneda(imprevistos)}</h4>
+            <h4>Imprevistos : {formatoMoneda(imprevistos)}</h4>
           )}
 
           {aplicarUtilidad && (
