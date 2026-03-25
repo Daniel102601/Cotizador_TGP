@@ -5,15 +5,19 @@ import "../cotizador.css"
 import CotizacionPDF from "./CotizacionPDF.jsx"
 
 function Cotizador() {
-
-  // 🔹 Fecha automática
-  const fechaActual = new Date().toLocaleDateString("sv-SE")
-  const [fecha, setFecha] = useState(fechaActual)
+  // 🔹 Fecha automática (Formato YYYY-MM-DD local)
+  const obtenerFechaLocal = () => {
+    const offset = new Date().getTimezoneOffset()
+    const localDate = new Date(new Date().getTime() - (offset * 60 * 1000))
+    return localDate.toISOString().split('T')[0]
+  }
+  
+  const [fecha, setFecha] = useState(obtenerFechaLocal())
 
   // 🔹 Cotizaciones guardadas
   const [cotizacionesGuardadas, setCotizacionesGuardadas] = useState([])
 
-  // 🔹 Número de cotización (se genera al guardar)
+  // 🔹 Número de cotización (se genera al montar o al darle a "Nueva")
   const [numeroCotizacion, setNumeroCotizacion] = useState("COT-1000")
 
   // 🔹 Datos cliente
@@ -47,11 +51,9 @@ function Cotizador() {
       setCotizacionesGuardadas(JSON.parse(guardadas))
     }
 
-    // Generar número inicial según último guardado
-    const ultimoNumero = localStorage.getItem("contadorCotizaciones")
-    if (ultimoNumero) {
-      setNumeroCotizacion(`COT-${String(parseInt(ultimoNumero) + 1).padStart(4, "1")}`)
-    }
+    // Generar número inicial (Si no hay nada, asume que el último fue 999 para empezar en 1000)
+    const ultimoNumero = localStorage.getItem("contadorCotizaciones") || "999"
+    setNumeroCotizacion(`COT-${parseInt(ultimoNumero) + 1}`)
   }, [])
 
   // 🔹 Funciones de items
@@ -74,12 +76,11 @@ function Cotizador() {
   }
 
   const calcularTotalItem = (item) => item.cantidad * item.valorUnitario
-
   const subtotal = items.reduce((acc, item) => acc + calcularTotalItem(item), 0)
 
   // 🔹 Cálculos base
   const administracionBase = subtotal * 0.05
-  const imprevistosBase = administracionBase * 0.04
+  const imprevistosBase = subtotal * 0.04
   const utilidadBase = subtotal * 0.05
   const ivaBase = utilidadBase * 0.19
 
@@ -97,7 +98,7 @@ function Cotizador() {
       minimumFractionDigits: 0
     })
 
-  // 🔹 Guardar cotización (incrementa número correctamente)
+  // 🔹 Guardar cotización
   const guardarCotizacion = () => {
     let lista = JSON.parse(localStorage.getItem("cotizaciones")) || []
 
@@ -112,17 +113,16 @@ function Cotizador() {
       tiempoEntrega,
       observaciones
     }
-    // Si ya existe, reemplazar
+    
+    // Si ya existe (estamos editando), reemplazar
     const index = lista.findIndex(c => c.numero === numeroCotizacion)
     if (index !== -1) {
       lista[index] = nueva
     } else {
       lista.push(nueva)
-      // Incrementar número solo al guardar nueva
-      const ultimoNumero = localStorage.getItem("contadorCotizaciones") || "1000"
-      const nuevoNumero = parseInt(ultimoNumero) + 1
-      localStorage.setItem("contadorCotizaciones", nuevoNumero)
-      setNumeroCotizacion(`COT-${String(nuevoNumero).padStart(4, "1000")}`)
+      // Como es una cotización nueva, extraemos el número (ej: de "COT-1000" extraemos 1000) y actualizamos el contador global
+      const numeroActual = parseInt(numeroCotizacion.split("-")[1])
+      localStorage.setItem("contadorCotizaciones", numeroActual)
     }
 
     localStorage.setItem("cotizaciones", JSON.stringify(lista))
@@ -130,67 +130,64 @@ function Cotizador() {
     alert("Cotización guardada correctamente ✅")
   }
 
-
-   const generarPDF = async () => {
-      const element = document.getElementById("area-pdf")
-
-      const canvas = await html2canvas(element, {
-        scale: 2,
-        useCORS: true
-      })
-
-      const imgData = canvas.toDataURL("image/png")
-
-      const pdf = new jsPDF("p", "mm", "a4")
-
-      const pageWidth = 210
-      const pageHeight = 297
-
-      const imgWidth = pageWidth
-      const imgHeight = (canvas.height * imgWidth) / canvas.width
-
-      let position = 0
-      let heightLeft = imgHeight
-
-      pdf.addImage(imgData, "PNG", 0, position, imgWidth, imgHeight)
-      heightLeft -= pageHeight
-
-      while (heightLeft > 0) {
-        position = heightLeft - imgHeight
-        pdf.addPage()
-        pdf.addImage(imgData, "PNG", 0, position, imgWidth, imgHeight)
-        heightLeft -= pageHeight
-      }
-
-        // Nombre dinámico
-        const nombreLimpio = cliente.nombre
-          .replace(/\s+/g, "_")
-          .replace(/[^\w]/g, "")
-
-        const nombreArchivo = `${numeroCotizacion}_${nombreLimpio}.pdf`
-
-        pdf.save(nombreArchivo)
+  const generarPDF = async () => {
+    const element = document.getElementById("area-pdf")
+    if(!element){
+        alert("Error: No se encontró el área para generar el PDF.")
+        return
     }
 
-     const enviarWhatsApp = async () => {
-      await generarPDF()
+    const canvas = await html2canvas(element, {
+      scale: 2,
+      useCORS: true
+    })
 
-      if (!cliente.telefono) {
-        alert("El cliente no tiene número de teléfono")
-        return
-      }
+    const imgData = canvas.toDataURL("image/png")
+    const pdf = new jsPDF("p", "mm", "a4")
 
-      let numero = cliente.telefono.replace(/\D/g, "")
+    const pageWidth = 210
+    const pageHeight = 297
+    const imgWidth = pageWidth
+    const imgHeight = (canvas.height * imgWidth) / canvas.width
 
-      if (!numero.startsWith("57")) {
-        numero = "57" + numero
-      }
+    let position = 0
+    let heightLeft = imgHeight
 
-      const mensaje = `Hola ${cliente.nombre}, te compartimos la cotización ${numeroCotizacion} de CONSTRUCCIONES TGP SAS. Quedamos atentos.`
+    pdf.addImage(imgData, "PNG", 0, position, imgWidth, imgHeight)
+    heightLeft -= pageHeight
 
-      const url = `https://api.whatsapp.com/send?phone=${numero}&text=${encodeURIComponent(mensaje)}`
+    while (heightLeft > 0) {
+      position = heightLeft - imgHeight
+      pdf.addPage()
+      pdf.addImage(imgData, "PNG", 0, position, imgWidth, imgHeight)
+      heightLeft -= pageHeight
+    }
 
-      window.open(url, "_blank")
+    // Nombre dinámico
+    const nombreLimpio = cliente.nombre ? cliente.nombre.replace(/\s+/g, "_").replace(/[^\w]/g, "") : "Cliente"
+    const nombreArchivo = `${numeroCotizacion}_${nombreLimpio}.pdf`
+
+    pdf.save(nombreArchivo)
+  }
+
+  const enviarWhatsApp = async () => {
+    await generarPDF() // Esto descargará el PDF en el dispositivo del usuario
+
+    if (!cliente.telefono) {
+      alert("El cliente no tiene número de teléfono")
+      return
+    }
+
+    let numero = cliente.telefono.replace(/\D/g, "")
+
+    if (!numero.startsWith("57")) {
+      numero = "57" + numero
+    }
+
+    const mensaje = `Hola ${cliente.nombre}, te compartimos la cotización ${numeroCotizacion} de CONSTRUCCIONES TGP SAS. Quedamos atentos.`
+    const url = `https://api.whatsapp.com/send?phone=${numero}&text=${encodeURIComponent(mensaje)}`
+
+    window.open(url, "_blank")
   }
 
   // 🔹 Cargar cotización para editar
@@ -208,26 +205,18 @@ function Cotizador() {
     setAplicarIva(true)
   }
 
-
   const eliminarCotizacion = (numero) => {
-
     const confirmar = window.confirm("¿Estás seguro de eliminar esta cotización?")
     if (!confirmar) return
 
     let lista = JSON.parse(localStorage.getItem("cotizaciones")) || []
-
-    // Filtrar la que se quiere eliminar
     const nuevaLista = lista.filter(c => c.numero !== numero)
-
-    // Actualizar localStorage
+    
     localStorage.setItem("cotizaciones", JSON.stringify(nuevaLista))
-
-    // Actualizar estado
     setCotizacionesGuardadas(nuevaLista)
-
   }
 
-  // 🔹 Nueva cotización (resetea campos pero mantiene número siguiente)
+  // 🔹 Nueva cotización (resetea campos y actualiza el número al siguiente disponible)
   const nuevaCotizacion = () => {
     setCliente({ nombre: "", documento: "", telefono: "", direccion: "" })
     setGarantia("")
@@ -238,180 +227,183 @@ function Cotizador() {
     setAplicarImprevistos(true)
     setAplicarUtilidad(true)
     setAplicarIva(true)
-    setFecha(new Date().toISOString().split("T")[0])
+    setFecha(obtenerFechaLocal())
+
+    // Consultamos el contador guardado para asignar el siguiente número de cotización
+    const ultimoNumero = localStorage.getItem("contadorCotizaciones") || "999"
+    setNumeroCotizacion(`COT-${parseInt(ultimoNumero) + 1}`)
   }
 
   return (
     <div className="app-container">
-    <div style={{ padding: "30px", fontFamily: "Arial" }}>
-      {/* 🔹 Historial */}
-      <hr />
-      <h3>Cotizaciones Guardadas</h3>
-      <ul>
-        {cotizacionesGuardadas.map((cot, index) => (
-      <li key={index}>
-        {cot.numero} - {cot.cliente.nombre} - {formatoMoneda(cot.totalGeneral)}
+      <div style={{ padding: "30px", fontFamily: "Arial" }}>
+        
+        {/* 🔹 Historial */}
+        <hr />
+        <h3>Cotizaciones Guardadas</h3>
+        <ul>
+          {cotizacionesGuardadas.map((cot, index) => (
+            <li key={index} style={{ marginBottom: "10px" }}>
+              {cot.numero} - {cot.cliente.nombre} - {formatoMoneda(cot.totalGeneral)}
 
-        <button
-          onClick={() => cargarCotizacion(cot)}
-          style={{ marginLeft: "10px" }}
-        >
-          Editar
+              <button
+                onClick={() => cargarCotizacion(cot)}
+                style={{ marginLeft: "10px" }}
+              >
+                Editar
+              </button>
+
+              <button
+                onClick={() => eliminarCotizacion(cot.numero)}
+                style={{
+                  marginLeft: "10px",
+                  backgroundColor: "#d32f2f",
+                  color: "white",
+                  border: "none",
+                  padding: "5px 10px",
+                  borderRadius: "6px",
+                  cursor: "pointer"
+                }}
+              >
+                Eliminar
+              </button>
+            </li>
+          ))}
+        </ul>
+
+        <hr />
+
+        <CotizacionPDF
+          numeroCotizacion={numeroCotizacion}
+          fecha={fecha}
+          cliente={cliente}
+          items={items}
+          subtotal={subtotal}
+          administracion={administracion}
+          imprevistos={imprevistos}
+          utilidad={utilidad}
+          iva={iva}
+          totalGeneral={totalGeneral}
+          garantia={garantia}
+          tiempoEntrega={tiempoEntrega}
+          observaciones={observaciones}
+          formatoMoneda={formatoMoneda}
+        />
+
+        {/* 🔹 Encabezado */}
+        <h1 className="titulo">
+          COTIZACIÓN - CONSTRUCCIONES TGP SAS
+        </h1>
+        <button className="boton" onClick={nuevaCotizacion}>
+          Nueva Cotización
         </button>
 
-        <button
-          onClick={() => eliminarCotizacion(cot.numero)}
-          style={{
-            marginLeft: "10px",
-            backgroundColor: "#d32f2f",
-            color: "white",
-            border: "none",
-            padding: "5px 10px",
-            borderRadius: "6px",
-            cursor: "pointer"
-          }}
-        >
-          Eliminar
+        <button className="boton boton-secundario" onClick={guardarCotizacion} style={{ marginLeft: "10px" }}>
+          Guardar Cotización
         </button>
 
-  </li>
-))}
-      </ul>
+        <div style={{ marginBottom: "20px", marginTop: "20px" }}>
+          <label><strong>N° Cotización:</strong></label>
+          <input
+            type="text"
+            value={numeroCotizacion}
+            readOnly
+            style={{ marginLeft: "10px", marginRight: "20px" }}
+          />
+          <label><strong>Fecha:</strong></label>
+          <input
+            type="date"
+            value={fecha}
+            readOnly
+            style={{ marginLeft: "10px" }}
+          />
+        </div>
 
-      <hr />
-
-
-      <CotizacionPDF
-      numeroCotizacion={numeroCotizacion}
-      fecha={fecha}
-      cliente={cliente}
-      items={items}
-      subtotal={subtotal}
-      administracion={administracion}
-      imprevistos={imprevistos}
-      utilidad={utilidad}
-      iva={iva}
-      totalGeneral={totalGeneral}
-      garantia={garantia}
-      tiempoEntrega={tiempoEntrega}
-      observaciones={observaciones}
-      formatoMoneda={formatoMoneda}
-      />
-
-      {/* 🔹 Encabezado */}
-      <h1 className="titulo">
-        COTIZACIÓN - CONSTRUCCIONES TGP SAS
-      </h1>
-      <button className="boton" onClick={nuevaCotizacion}>
-        Nueva Cotización
-      </button>
-
-      <button className="boton boton-secundario" onClick={guardarCotizacion}>
-        Guardar Cotización
-      </button>
-
-      <div style={{ marginBottom: "20px" }}>
-        <label><strong>N° Cotización:</strong></label>
+        {/* 🔹 Cliente */}
+        <h3>Datos del Cliente</h3>
         <input
           type="text"
-          value={numeroCotizacion}
-          readOnly
-          style={{ marginLeft: "10px", marginRight: "20px" }}
+          placeholder="Nombre / Razón Social"
+          value={cliente.nombre}
+          onChange={(e) => setCliente({ ...cliente, nombre: e.target.value })}
+          style={{ width: "100%", marginBottom: "10px" }}
         />
-        <label><strong>Fecha:</strong></label>
         <input
-          type="date"
-          value={fecha}
-          readOnly
-          style={{ marginLeft: "10px" }}
+          type="text"
+          placeholder="Documento / NIT"
+          value={cliente.documento}
+          onChange={(e) => setCliente({ ...cliente, documento: e.target.value })}
+          style={{ width: "100%", marginBottom: "10px" }}
         />
-      </div>
+        <input
+          type="text"
+          placeholder="Teléfono"
+          value={cliente.telefono}
+          onChange={(e) => setCliente({ ...cliente, telefono: e.target.value })}
+          style={{ width: "100%", marginBottom: "10px" }}
+        />
+        <input
+          type="text"
+          placeholder="Dirección"
+          value={cliente.direccion}
+          onChange={(e) => setCliente({ ...cliente, direccion: e.target.value })}
+          style={{ width: "100%", marginBottom: "20px" }}
+        />
 
-      {/* 🔹 Cliente */}
-      <h3>Datos del Cliente</h3>
-      <input
-        type="text"
-        placeholder="Nombre / Razón Social"
-        value={cliente.nombre}
-        onChange={(e) => setCliente({ ...cliente, nombre: e.target.value })}
-        style={{ width: "100%", marginBottom: "10px" }}
-      />
-      <input
-        type="text"
-        placeholder="Documento / NIT"
-        value={cliente.documento}
-        onChange={(e) => setCliente({ ...cliente, documento: e.target.value })}
-        style={{ width: "100%", marginBottom: "10px" }}
-      />
-      <input
-        type="text"
-        placeholder="Teléfono"
-        value={cliente.telefono}
-        onChange={(e) => setCliente({ ...cliente, telefono: e.target.value })}
-        style={{ width: "100%", marginBottom: "10px" }}
-      />
-      <input
-        type="text"
-        placeholder="Dirección"
-        value={cliente.direccion}
-        onChange={(e) => setCliente({ ...cliente, direccion: e.target.value })}
-        style={{ width: "100%", marginBottom: "20px" }}
-      />
-
-      {/* 🔹 Tabla de items */}
-      <table border="1" cellPadding="8" style={{ width: "100%" }}>
-        <thead>
-          <tr>
-            <th>ITEM</th>
-            <th>Descripción</th>
-            <th>Cant</th>
-            <th>V. Unit</th>
-            <th>V. Total</th>
-            <th></th>
-          </tr>
-        </thead>
-        <tbody>
-          {items.map((item, index) => (
-            <tr key={index}>
-              <td>{index + 1}</td>
-              <td>
-                <input
-                  value={item.descripcion}
-                  onChange={(e) => actualizarItem(index, "descripcion", e.target.value)}
-                />
-              </td>
-              <td>
-                <input
-                  type="number"
-                  value={item.cantidad}
-                  onChange={(e) => actualizarItem(index, "cantidad", e.target.value)}
-                />
-              </td>
-              <td>
-                <input
-                  type="number"
-                  value={item.valorUnitario}
-                  onChange={(e) => actualizarItem(index, "valorUnitario", e.target.value)}
-                />
-              </td>
-              <td>{formatoMoneda(calcularTotalItem(item))}</td>
-              <td>
-                <button className="boton-item" onClick={() => eliminarItem(index)}>X</button>
-              </td>
+        {/* 🔹 Tabla de items */}
+        <table border="1" cellPadding="8" style={{ width: "100%", borderCollapse: "collapse" }}>
+          <thead>
+            <tr>
+              <th>ITEM</th>
+              <th>Descripción</th>
+              <th>Cant</th>
+              <th>V. Unit</th>
+              <th>V. Total</th>
+              <th></th>
             </tr>
-          ))}
-        </tbody>
-      </table>
+          </thead>
+          <tbody>
+            {items.map((item, index) => (
+              <tr key={index}>
+                <td style={{ textAlign: "center" }}>{index + 1}</td>
+                <td>
+                  <input
+                    style={{ width: "100%" }}
+                    value={item.descripcion}
+                    onChange={(e) => actualizarItem(index, "descripcion", e.target.value)}
+                  />
+                </td>
+                <td>
+                  <input
+                    type="number"
+                    style={{ width: "60px" }}
+                    value={item.cantidad}
+                    onChange={(e) => actualizarItem(index, "cantidad", e.target.value)}
+                  />
+                </td>
+                <td>
+                  <input
+                    type="number"
+                    style={{ width: "100%" }}
+                    value={item.valorUnitario}
+                    onChange={(e) => actualizarItem(index, "valorUnitario", e.target.value)}
+                  />
+                </td>
+                <td style={{ whiteSpace: "nowrap" }}>{formatoMoneda(calcularTotalItem(item))}</td>
+                <td>
+                  <button className="boton-item" onClick={() => eliminarItem(index)}>X</button>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
 
-      <br />
-      <button className="boton-item" onClick={agregarItem}>Agregar Ítem</button>
+        <br />
+        <button className="boton-item" onClick={agregarItem}>Agregar Ítem</button>
 
-      <hr />
+        <hr />
 
-      <div className="resumen">
-
-
-
+        <div className="resumen">
           {/* 🔹 Totales y opciones */}
           <h3>Subtotal: {formatoMoneda(subtotal)}</h3>
           {aplicarAdministracion && (
@@ -429,86 +421,76 @@ function Cotizador() {
           {aplicarUtilidad && aplicarIva && (
            <h4>IVA sobre utilidad (19%): {formatoMoneda(iva)}</h4>
           )}
+        </div>
 
+        <h2 className="total">
+          Total General: {formatoMoneda(totalGeneral)}
+        </h2>
 
+        <div className="opciones-movil" style={{ display: "flex", gap: "10px", flexWrap: "wrap", marginBottom: "20px" }}>
+          <label className={`toggle ${aplicarAdministracion ? "activo" : ""}`}>
+            <input
+              type="checkbox"
+              checked={aplicarAdministracion}
+              onChange={() => setAplicarAdministracion(!aplicarAdministracion)}
+            />
+            Administración 5%
+          </label>
+
+          <label className={`toggle ${aplicarImprevistos ? "activo" : ""}`}>
+            <input
+              type="checkbox"
+              checked={aplicarImprevistos}
+              onChange={() => setAplicarImprevistos(!aplicarImprevistos)}
+            />
+            Imprevistos 4%
+          </label>
+
+          <label className={`toggle ${aplicarUtilidad ? "activo" : ""}`}>
+            <input
+              type="checkbox"
+              checked={aplicarUtilidad}
+              onChange={() => setAplicarUtilidad(!aplicarUtilidad)}
+            />
+            Utilidad 5%
+          </label>
+
+          <label className={`toggle ${aplicarIva ? "activo" : ""}`}>
+            <input
+              type="checkbox"
+              checked={aplicarIva}
+              onChange={() => setAplicarIva(!aplicarIva)}
+            />
+            IVA 19%
+          </label>
+        </div>
+
+        <hr/>
+
+        {/* 🔹 Condiciones */}
+        <h3>Condiciones Comerciales</h3>
+        <p><strong>VALIDEZ:</strong> 5-6 días hábiles</p>
+        <p><strong>PAGO:</strong> Efectivo o cuenta de ahorros 108 0000 7115 - Bancolombia</p>
+        
+        <label><strong>GARANTÍA:</strong></label>
+        <textarea value={garantia} onChange={(e) => setGarantia(e.target.value)} rows="2" style={{ width: "100%", marginBottom: "10px" }} />
+        
+        <label><strong>TIEMPO DE ENTREGA:</strong></label>
+        <textarea value={tiempoEntrega} onChange={(e) => setTiempoEntrega(e.target.value)} rows="2" style={{ width: "100%", marginBottom: "10px" }} />
+        
+        <label><strong>OBSERVACIONES:</strong></label>
+        <textarea value={observaciones} onChange={(e) => setObservaciones(e.target.value)} rows="3" style={{ width: "100%", marginBottom: "20px" }} />
+
+        <button type="button" className="boton-item" onClick={generarPDF} style={{ marginRight: "10px" }}>
+          Descargar PDF
+        </button>
+
+        <button className="boton-item" onClick={enviarWhatsApp}>
+           Enviar por WhatsApp
+        </button>
 
       </div>
-
-
-      <h2 className="total">
-        Total General: {formatoMoneda(totalGeneral)}
-      </h2>
-
-
-      <div className="opciones-movil">
-
-        <label className={`toggle ${aplicarAdministracion ? "activo" : ""}`}>
-          <input
-            type="checkbox"
-            checked={aplicarAdministracion}
-            onChange={() => setAplicarAdministracion(!aplicarAdministracion)}
-          />
-          Administración 5%
-        </label>
-
-        <label className={`toggle ${aplicarImprevistos ? "activo" : ""}`}>
-          <input
-            type="checkbox"
-            checked={aplicarImprevistos}
-            onChange={() => setAplicarImprevistos(!aplicarImprevistos)}
-          />
-          Imprevistos 4%
-        </label>
-
-        <label className={`toggle ${aplicarUtilidad ? "activo" : ""}`}>
-          <input
-            type="checkbox"
-            checked={aplicarUtilidad}
-            onChange={() => setAplicarUtilidad(!aplicarUtilidad)}
-          />
-          Utilidad 5%
-        </label>
-
-        <label className={`toggle ${aplicarIva ? "activo" : ""}`}>
-          <input
-            type="checkbox"
-            checked={aplicarIva}
-            onChange={() => setAplicarIva(!aplicarIva)}
-          />
-          IVA 19%
-        </label>
-
-
-
-      </div>
-
-      <hr/>
-
-      {/* 🔹 Condiciones */}
-      <h3>Condiciones Comerciales</h3>
-      <p><strong>VALIDEZ:</strong> 5-6 días hábiles</p>
-      <p><strong>PAGO:</strong> Efectivo o cuenta de ahorros 108 0000 7115 - Bancolombia</p>
-      <label><strong>GARANTÍA:</strong></label>
-      <textarea value={garantia} onChange={(e) => setGarantia(e.target.value)} rows="2" style={{ width: "100%", marginBottom: "10px" }} />
-      <label><strong>TIEMPO DE ENTREGA:</strong></label>
-      <textarea value={tiempoEntrega} onChange={(e) => setTiempoEntrega(e.target.value)} rows="2" style={{ width: "100%", marginBottom: "10px" }} />
-      <label><strong>OBSERVACIONES:</strong></label>
-      <textarea value={observaciones} onChange={(e) => setObservaciones(e.target.value)} rows="3" style={{ width: "100%" }} />
-
-      <button type="button" className="boton-item"  onClick={generarPDF} >
-        Descargar PDF
-
-      </button>
-
-      <button className="boton-item" onClick={enviarWhatsApp}>
-         Enviar por WhatsApp
-      </button>
-
-
-
-
     </div>
-  </div>
   )
 }
 
