@@ -10,10 +10,12 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "@supabase/supabase-js": "^2.103.0",
     "html2canvas": "^1.4.1",
     "jspdf": "^4.1.0",
     "react": "^19.2.0",
     "react-dom": "^19.2.0",
+    "react-router-dom": "^7.14.0",
     "vite-plugin-pwa": "^1.2.0"
   },
   "devDependencies": {

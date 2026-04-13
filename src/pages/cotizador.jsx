@@ -3,6 +3,7 @@ import jsPDF from "jspdf"
 import html2canvas from "html2canvas"
 import "../cotizador.css"
 import CotizacionPDF from "./CotizacionPDF.jsx"
+import { supabase } from "../lib/supabase" // 👈 Importación de Supabase
 
 function Cotizador() {
   // 🔹 Fecha automática (Formato YYYY-MM-DD local)
@@ -14,10 +15,10 @@ function Cotizador() {
   
   const [fecha, setFecha] = useState(obtenerFechaLocal())
 
-  // 🔹 Cotizaciones guardadas
+  // 🔹 Cotizaciones guardadas (Ahora vienen de la nube)
   const [cotizacionesGuardadas, setCotizacionesGuardadas] = useState([])
 
-  // 🔹 Número de cotización (se genera al montar o al darle a "Nueva")
+  // 🔹 Número de cotización
   const [numeroCotizacion, setNumeroCotizacion] = useState("COT-1000")
 
   // 🔹 Datos cliente
@@ -44,27 +45,43 @@ function Cotizador() {
     { descripcion: "", cantidad: 1, valorUnitario: 0 }
   ])
 
-  // 🔹 Cargar cotizaciones guardadas al montar
+  // 🔹 Cargar cotizaciones desde Supabase al montar
   useEffect(() => {
-    const guardadas = localStorage.getItem("cotizaciones")
-    if (guardadas) {
-      setCotizacionesGuardadas(JSON.parse(guardadas))
+    cargarCotizaciones()
+  }, [])
+
+  const cargarCotizaciones = async () => {
+    const { data, error } = await supabase
+      .from("cotizaciones")
+      .select("*")
+      .order("id", { ascending: true })
+
+    if (error) {
+      console.error("Error cargando cotizaciones:", error)
+      return
     }
 
-    // Generar número inicial (Si no hay nada, asume que el último fue 999 para empezar en 1000)
-    const ultimoNumero = localStorage.getItem("contadorCotizaciones") || "999"
-    setNumeroCotizacion(`COT-${parseInt(ultimoNumero) + 1}`)
-  }, [])
+    if (data && data.length > 0) {
+      // Reconstruimos el array desde el JSON guardado
+      const cotizacionesFormateadas = data.map(cot => cot.datos)
+      setCotizacionesGuardadas(cotizacionesFormateadas)
+      
+      // Calcular el siguiente número basado en el último registro
+      const ultimoNumero = data[data.length - 1].numero.split("-")[1]
+      setNumeroCotizacion(`COT-${parseInt(ultimoNumero) + 1}`)
+    } else {
+      setCotizacionesGuardadas([])
+      setNumeroCotizacion("COT-1000")
+    }
+  }
 
   // 🔹 Funciones de items
   const agregarItem = () => {
     setItems([...items, { descripcion: "", cantidad: 1, valorUnitario: 0 }])
   }
 
-  // NUEVA FUNCIÓN: Inserta un ítem justo debajo del índice seleccionado
   const insertarItemAbajo = (index) => {
     const nuevosItems = [...items]
-    // splice modifica el arreglo insertando un nuevo elemento en la posición index + 1
     nuevosItems.splice(index + 1, 0, { descripcion: "", cantidad: 1, valorUnitario: 0 })
     setItems(nuevosItems)
   }
@@ -106,36 +123,52 @@ function Cotizador() {
       minimumFractionDigits: 0
     })
 
-  // 🔹 Guardar cotización
-  const guardarCotizacion = () => {
-    let lista = JSON.parse(localStorage.getItem("cotizaciones")) || []
-
-    const nueva = {
-      numero: numeroCotizacion,
-      fecha,
-      cliente,
-      items,
-      subtotal,
-      totalGeneral,
-      garantia,
-      tiempoEntrega,
-      observaciones
+  // 🔹 Guardar o actualizar cotización en Supabase
+  const guardarCotizacion = async () => {
+    const nuevaCotizacionJson = {
+      numero: numeroCotizacion, fecha, cliente, items, 
+      subtotal, totalGeneral, garantia, tiempoEntrega, observaciones
     }
-    
-    // Si ya existe (estamos editando), reemplazar
-    const index = lista.findIndex(c => c.numero === numeroCotizacion)
-    if (index !== -1) {
-      lista[index] = nueva
+
+    // 1. Revisar si la cotización ya existe (por número)
+    const { data: existe } = await supabase
+      .from("cotizaciones")
+      .select("id")
+      .eq("numero", numeroCotizacion)
+      .maybeSingle()
+
+    let errorSupabase
+
+    if (existe) {
+      // 2. Si existe, la actualizamos
+      const { error } = await supabase
+        .from("cotizaciones")
+        .update({
+          cliente_nombre: cliente.nombre,
+          total: totalGeneral,
+          datos: nuevaCotizacionJson
+        })
+        .eq("numero", numeroCotizacion)
+      errorSupabase = error
     } else {
-      lista.push(nueva)
-      // Como es una cotización nueva, extraemos el número (ej: de "COT-1000" extraemos 1000) y actualizamos el contador global
-      const numeroActual = parseInt(numeroCotizacion.split("-")[1])
-      localStorage.setItem("contadorCotizaciones", numeroActual)
+      // 3. Si no existe, la insertamos como nueva
+      const { error } = await supabase
+        .from("cotizaciones")
+        .insert([{
+          numero: numeroCotizacion,
+          cliente_nombre: cliente.nombre,
+          total: totalGeneral,
+          datos: nuevaCotizacionJson
+        }])
+      errorSupabase = error
     }
 
-    localStorage.setItem("cotizaciones", JSON.stringify(lista))
-    setCotizacionesGuardadas(lista)
-    alert("Cotización guardada correctamente ✅")
+    if (errorSupabase) {
+      alert("Error al guardar en la nube: " + errorSupabase.message)
+    } else {
+      alert("Cotización guardada correctamente en la nube ☁️✅")
+      cargarCotizaciones() // Recargar la lista para actualizar la vista
+    }
   }
 
   const generarPDF = async () => {
@@ -213,18 +246,24 @@ function Cotizador() {
     setAplicarIva(true)
   }
 
-  const eliminarCotizacion = (numero) => {
-    const confirmar = window.confirm("¿Estás seguro de eliminar esta cotización?")
+  // 🔹 Eliminar de la nube
+  const eliminarCotizacion = async (numero) => {
+    const confirmar = window.confirm("¿Estás seguro de eliminar esta cotización en la nube?")
     if (!confirmar) return
 
-    let lista = JSON.parse(localStorage.getItem("cotizaciones")) || []
-    const nuevaLista = lista.filter(c => c.numero !== numero)
-    
-    localStorage.setItem("cotizaciones", JSON.stringify(nuevaLista))
-    setCotizacionesGuardadas(nuevaLista)
+    const { error } = await supabase
+      .from("cotizaciones")
+      .delete()
+      .eq("numero", numero)
+
+    if (error) {
+      alert("Error al eliminar: " + error.message)
+    } else {
+      cargarCotizaciones() // Recargar la lista
+    }
   }
 
-  // 🔹 Nueva cotización (resetea campos y actualiza el número al siguiente disponible)
+  // 🔹 Nueva cotización (resetea campos y actualiza el número basándose en la nube)
   const nuevaCotizacion = () => {
     setCliente({ nombre: "", documento: "", telefono: "", direccion: "" })
     setGarantia("")
@@ -237,9 +276,12 @@ function Cotizador() {
     setAplicarIva(true)
     setFecha(obtenerFechaLocal())
 
-    // Consultamos el contador guardado para asignar el siguiente número de cotización
-    const ultimoNumero = localStorage.getItem("contadorCotizaciones") || "999"
-    setNumeroCotizacion(`COT-${parseInt(ultimoNumero) + 1}`)
+    if (cotizacionesGuardadas.length > 0) {
+      const ultimoNumero = cotizacionesGuardadas[cotizacionesGuardadas.length - 1].numero.split("-")[1]
+      setNumeroCotizacion(`COT-${parseInt(ultimoNumero) + 1}`)
+    } else {
+      setNumeroCotizacion("COT-1000")
+    }
   }
 
   return (

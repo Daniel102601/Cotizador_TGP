@@ -22,3 +22,9 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+
+# Archivos de entorno (Seguridad)
+.env
+.env.*
+!.env.example
