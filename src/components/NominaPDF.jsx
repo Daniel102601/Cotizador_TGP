@@ -2,8 +2,16 @@ import logo from "../assets/logo.png"
 
 function NominaPDF({ datos, calculos, formatoMoneda }) {
 
-  const formatFecha = (f) =>
-    f ? new Date(f).toLocaleDateString("es-CO") : "-"
+  // 🔹 SOLUCIÓN ZONA HORARIA: Cortar el string directo
+  const formatFecha = (f) => {
+    if (!f) return "-"
+    // El input tipo "date" siempre entrega "YYYY-MM-DD"
+    const partes = f.split("-") 
+    if (partes.length === 3) {
+      return `${partes[2]}/${partes[1]}/${partes[0]}` // Lo pasamos a DD/MM/YYYY
+    }
+    return f
+  }
 
   const totalDevengado =
     Number(calculos.sueldo) +
@@ -151,7 +159,7 @@ function NominaPDF({ datos, calculos, formatoMoneda }) {
               </tr>
 
               <tr>
-                <td style={td}>Préstamo</td>
+                <td style={td}>Préstamo (Vales)</td>
                 <td style={tdRight}>—</td>
                 <td style={tdRight}>{formatoMoneda(calculos.prestamo)}</td>
               </tr>
