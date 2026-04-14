@@ -2,15 +2,29 @@ import logo from "../assets/logo.png"
 
 function NominaPDF({ datos, calculos, formatoMoneda }) {
 
-  // 🔹 SOLUCIÓN ZONA HORARIA: Cortar el string directo
+  // 🔹 SOLUCIÓN BLINDADA: Filtro texto puro (Ignora zonas horarias)
   const formatFecha = (f) => {
     if (!f) return "-"
-    // El input tipo "date" siempre entrega "YYYY-MM-DD"
-    const partes = f.split("-") 
-    if (partes.length === 3) {
-      return `${partes[2]}/${partes[1]}/${partes[0]}` // Lo pasamos a DD/MM/YYYY
+    
+    try {
+      // 1. Convertimos a texto por si llega como objeto
+      const strFecha = String(f)
+      
+      // 2. Extraemos estrictamente los primeros 10 caracteres (YYYY-MM-DD)
+      const soloFecha = strFecha.substring(0, 10)
+      
+      // 3. Separamos por el guion
+      const partes = soloFecha.split("-")
+      
+      // 4. Si tenemos Año, Mes y Día, lo ensamblamos en formato Latino DD/MM/YYYY
+      if (partes.length === 3) {
+        return `${partes[2]}/${partes[1]}/${partes[0]}`
+      }
+      
+      return strFecha
+    } catch (error) {
+      return "-"
     }
-    return f
   }
 
   const totalDevengado =
