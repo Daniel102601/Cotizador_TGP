@@ -9,6 +9,15 @@ function Nomina() {
 
   // 🔹 STORAGE EN NUBE
   const [empleados, setEmpleados] = useState([])
+  const [mostrarInforme, setMostrarInforme] = useState(false)
+  const [mostrarResumenNomina, setMostrarResumenNomina] = useState(false)
+const [resumenNomina, setResumenNomina] = useState([])
+const [totalResumenNomina, setTotalResumenNomina] = useState(0)
+const [mostrarFaltas, setMostrarFaltas] = useState(false)
+const [faltas, setFaltas] = useState({})
+const [diasExtra, setDiasExtra] = useState({})
+const [mostrarEditarEmpleado, setMostrarEditarEmpleado] = useState(false)
+const [empleadoEditar, setEmpleadoEditar] = useState(null)
 
   useEffect(() => {
     cargarEmpleados()
@@ -91,6 +100,36 @@ function Nomina() {
     }
   }
 
+  const actualizarEmpleado = async () => {
+
+    if (!empleadoEditar) return
+
+    const { error } = await supabase
+      .from("empleados")
+      .update({
+        nombre: empleadoEditar.nombre,
+        documento: empleadoEditar.documento,
+        celular: empleadoEditar.celular,
+        valor_dia: Number(empleadoEditar.valorDia)
+      })
+      .eq("id", empleadoEditar.id)
+
+    if (!error) {
+
+      setEmpleados(
+        empleados.map(emp =>
+          emp.id === empleadoEditar.id
+            ? empleadoEditar
+            : emp
+        )
+      )
+
+      setMostrarEditarEmpleado(false)
+
+      alert("Empleado actualizado correctamente ✅")
+    }
+  }
+
   const ocultarEmpleado = async (id, nombre) => {
     const confirmar = window.confirm(`¿Estás seguro de ocultar a ${nombre}? \n(No perderás su historial de pagos)`)
     if (!confirmar) return
@@ -98,8 +137,210 @@ function Nomina() {
     if (!error) setEmpleados(empleados.map(emp => emp.id === id ? { ...emp, activo: false } : emp))
   }
 
+  const empleadosInactivos = empleados.filter(
+  e => !e.activo
+  )
+
+  const reactivarEmpleado = async (id) => {
+
+  const { error } = await supabase
+    .from("empleados")
+    .update({ activo: true })
+    .eq("id", id)
+
+  if (!error) {
+
+    setEmpleados(
+      empleados.map(emp =>
+        emp.id === id
+          ? { ...emp, activo: true }
+          : emp
+      )
+    )
+
+    alert("Empleado reactivado ✅")
+  }
+}
+
   const formato = (v) => Number(v).toLocaleString("es-CO", { style: "currency", currency: "COP", minimumFractionDigits: 0 })
   const fechaArchivo = () => new Date().toISOString().split("T")[0]
+
+  const generarNominaCompleta = () => {
+
+  const empleadosActivos = empleados.filter(emp => emp.activo)
+
+  const resumen = empleadosActivos.map(emp => ({
+    id: emp.id,
+    nombre: emp.nombre,
+    valorDia: emp.valorDia,
+    dias: 14,
+    total: emp.valorDia * 14
+  }))
+
+  const totalGeneral = resumen.reduce(
+    (acc, emp) => acc + emp.total,
+    0
+  )
+
+  setResumenNomina(resumen)
+  setTotalResumenNomina(totalGeneral)
+  setMostrarResumenNomina(true)
+}
+
+  const generarNominaConFaltas = () => {
+      const empleadosActivos = empleados.filter(emp => emp.activo)
+
+      const resumen = empleadosActivos.map(emp => {
+        const diasFaltados = Number(faltas[emp.id] || 0)
+        const extras = Number(diasExtra[emp.id] || 0) // <-- Leemos los días extra
+        
+        // Cálculo: 14 base - faltas + extras
+        const diasPagados = Math.max(0, 14 - diasFaltados + extras) 
+        const total = diasPagados * emp.valorDia
+
+        return {
+          id: emp.id,
+          nombre: emp.nombre,
+          valorDia: emp.valorDia,
+          faltas: diasFaltados,
+          diasExtra: extras,
+          dias: diasPagados,
+          total
+        }
+      })
+
+      const totalGeneral = resumen.reduce(
+        (acc, emp) => acc + emp.total,
+        0
+      )
+
+      setResumenNomina(resumen)
+      setTotalResumenNomina(totalGeneral)
+      setMostrarFaltas(false)
+      setMostrarResumenNomina(true)
+    }
+  const descargarInformeQuincenal = () => {
+    const pdf = new jsPDF();
+    const pageWidth = pdf.internal.pageSize.getWidth();
+    const pageHeight = pdf.internal.pageSize.getHeight();
+
+    // 1. ENCABEZADO CORPORATIVO
+    pdf.setFillColor(0, 0, 0);
+    pdf.rect(0, 0, pageWidth, 35, "F");
+
+    // Borde inferior amarillo del encabezado
+    pdf.setFillColor(255, 204, 0); // Amarillo #FFCC00
+    pdf.rect(0, 35, pageWidth, 2, "F");
+
+    pdf.setTextColor(255, 204, 0);
+    pdf.setFont("helvetica", "bold");
+    pdf.setFontSize(22);
+    pdf.text("CONSTRUCCIONES TGP SAS", 15, 18);
+
+    pdf.setTextColor(255, 255, 255);
+    pdf.setFont("helvetica", "normal");
+    pdf.setFontSize(12);
+    pdf.text("INFORME CATORCENAL DE NÓMINA", 15, 27);
+
+    // 2. METADATOS DEL REPORTE
+    pdf.setTextColor(50, 50, 50);
+    pdf.setFontSize(10);
+    pdf.setFont("helvetica", "bold");
+    pdf.text("Fecha de Generación:", 15, 50);
+    pdf.setFont("helvetica", "normal");
+    pdf.text(fechaArchivo(), 55, 50);
+
+    pdf.setFont("helvetica", "bold");
+    pdf.text("Total Empleados:", 15, 56);
+    pdf.setFont("helvetica", "normal");
+    pdf.text(String(resumenNomina.length), 45, 56);
+
+    // 3. ENCABEZADO DE LA TABLA
+    let y = 68;
+    pdf.setFillColor(0, 0, 0);
+    pdf.rect(15, y, pageWidth - 30, 10, "F");
+
+    pdf.setTextColor(255, 204, 0);
+    pdf.setFont("helvetica", "bold");
+    pdf.setFontSize(10);
+    pdf.text("EMPLEADO", 20, y + 7);
+    pdf.text("DÍAS", 135, y + 7, { align: "center" });
+    pdf.text("TOTAL PAGADO", 190, y + 7, { align: "right" });
+
+    y += 10;
+
+    // 4. FILAS DE LA TABLA (Con estilo cebra)
+    pdf.setFont("helvetica", "normal");
+    pdf.setFontSize(10);
+
+    resumenNomina.forEach((emp, index) => {
+      // Fondo intercalado gris muy claro
+      if (index % 2 === 0) {
+        pdf.setFillColor(248, 250, 252);
+        pdf.rect(15, y, pageWidth - 30, 9, "F");
+      }
+
+      // Línea divisoria inferior
+      pdf.setDrawColor(226, 232, 240);
+      pdf.setLineWidth(0.5);
+      pdf.line(15, y + 9, pageWidth - 15, y + 9);
+
+      pdf.setTextColor(30, 41, 59); // Gris muy oscuro para el texto
+      
+      // Textos
+      pdf.text(emp.nombre.substring(0, 45), 20, y + 6);
+      pdf.text(String(emp.dias), 135, y + 6, { align: "center" });
+      pdf.text(formato(emp.total), 190, y + 6, { align: "right" });
+
+      y += 9;
+
+      // Paginación automática si se llena la hoja
+      if (y > pageHeight - 40) {
+        pdf.addPage();
+        y = 20;
+        
+        // Volver a pintar el encabezado de la tabla en la nueva hoja
+        pdf.setFillColor(0, 0, 0);
+        pdf.rect(15, y, pageWidth - 30, 10, "F");
+        pdf.setTextColor(255, 204, 0);
+        pdf.setFont("helvetica", "bold");
+        pdf.text("EMPLEADO", 20, y + 7);
+        pdf.text("DÍAS", 135, y + 7, { align: "center" });
+        pdf.text("TOTAL PAGADO", 190, y + 7, { align: "right" });
+        
+        y += 10;
+        pdf.setFont("helvetica", "normal");
+      }
+    });
+
+    // 5. BLOQUE DE GRAN TOTAL
+    y += 8;
+    
+    // Evitar que el total quede huérfano al final de la página
+    if (y > pageHeight - 30) {
+      pdf.addPage();
+      y = 20;
+    }
+
+    pdf.setFillColor(0, 0, 0);
+    pdf.rect(110, y, pageWidth - 125, 14, "F");
+
+    pdf.setTextColor(255, 255, 255);
+    pdf.setFont("helvetica", "bold");
+    pdf.setFontSize(12);
+    pdf.text("TOTAL NÓMINA:", 115, y + 9);
+
+    pdf.setTextColor(255, 204, 0);
+    pdf.text(formato(totalResumenNomina), 190, y + 9, { align: "right" });
+
+    // 6. PIE DE PÁGINA
+    pdf.setTextColor(150, 150, 150);
+    pdf.setFontSize(8);
+    pdf.setFont("helvetica", "normal");
+    pdf.text("Documento generado automáticamente por TGP Nómina", pageWidth / 2, pageHeight - 10, { align: "center" });
+
+    pdf.save(`Informe_Nomina_${fechaArchivo()}.pdf`);
+  }
 
   const sueldo = valores.dias * (empleadoActivo?.valorDia || 0)
   const dominicales = valores.tieneDominical ? valores.domCantidad * valores.domValor : 0
@@ -189,13 +430,58 @@ function Nomina() {
           }
         `}</style>
 
-        <div className="header-app">
-          <div>
-            <h1 style={{ margin: 0, color: "#000", fontSize: "28px", fontWeight: "900", letterSpacing: "-0.5px" }}>TGP Nómina</h1>
-            <p style={{ margin: "4px 0 0 0", color: "#64748b", fontSize: "15px" }}>Panel de control administrativo</p>
+      <div className="header-app">
+            <div>
+              <h1
+                style={{
+                  margin: 0,
+                  color: "#000",
+                  fontSize: "28px",
+                  fontWeight: "900",
+                  letterSpacing: "-0.5px"
+                }}
+              >
+                TGP Nómina
+              </h1>
+
+              <p
+                style={{
+                  margin: "4px 0 0 0",
+                  color: "#64748b",
+                  fontSize: "15px"
+                }}
+              >
+                Panel de control administrativo
+              </p>
+            </div>
+
+            <div
+              style={{
+                display: "flex",
+                gap: "10px",
+                flexWrap: "wrap"
+              }}
+            >
+              <button
+                style={{
+                  ...btnFlotante,
+                  background: "#000",
+                  color: "#FFD000"
+                }}
+                onClick={() => setMostrarInforme(true)}
+              >
+                📊 Informe Quincenal
+              </button>
+
+              <button
+                className="btn-crear"
+                style={btnFlotante}
+                onClick={() => setMostrarCrear(true)}
+              >
+                + Añadir Personal
+              </button>
+            </div>
           </div>
-          <button className="btn-crear" style={btnFlotante} onClick={() => setMostrarCrear(true)}>+ Añadir Personal</button>
-        </div>
 
         <div className="grid-dash">
           <DashboardCard title="Base Nómina (Aprox Mensual)" value={formato(totalNomina)} icon="💰" color="#000" />
@@ -222,10 +508,73 @@ function Nomina() {
                 <div style={{ display: "flex", gap: "10px", width: "100%" }}>
                   <button onClick={() => abrirEmpleado(emp)} className="btn-nomina">Pagar Nómina</button>
                   <button onClick={() => ocultarEmpleado(emp.id, emp.nombre)} className="btn-eliminar" title="Ocultar">🗑️</button>
+                  <button
+                  style={{
+                    background: "#FFD000",
+                    color: "#000",
+                    border: "none",
+                    borderRadius: "12px",
+                    padding: "12px",
+                    cursor: "pointer",
+                    fontWeight: "700"
+                  }}
+                  onClick={() => {
+                    setEmpleadoEditar({...emp})
+                    setMostrarEditarEmpleado(true)
+                  }}
+                >
+                  ✏️
+                </button>
                 </div>
               </div>
             ))}
           </div>
+        )}
+
+       {empleadosInactivos.length > 0 && (
+          <>
+            <div
+               style={{
+            ...modalPro,
+            maxWidth: "700px",
+            background: "#fff",
+            color: "#000"
+            }}
+            >
+              <h2
+                style={{
+                  color: "#64748b",
+                  margin: 0
+                }}
+              >
+                Personal Inactivo
+              </h2>
+            </div>
+
+            <div className="grid-emp">
+              {empleadosInactivos.map(emp => (
+                <div
+                  key={emp.id}
+                  className="emp-card"
+                  style={{ opacity: 0.8 }}
+                >
+                  <h3
+                  style={{
+                    color:"#000"
+                  }}>{emp.nombre}</h3>
+
+                  <button
+                    style={btnGuardar}
+                    onClick={() =>
+                      reactivarEmpleado(emp.id)
+                    }
+                  >
+                    🔄 Reactivar
+                  </button>
+                </div>
+              ))}
+            </div>
+          </>
         )}
 
         {/* MODAL CREAR EMPLEADO */}
@@ -245,6 +594,330 @@ function Nomina() {
             </div>
           </div>
         )}
+
+
+        {mostrarEditarEmpleado && (
+        <div style={overlayStyle}>
+          <div style={modalPro}>
+            <h2>Editar Empleado</h2>
+
+            <Input
+              label="Nombre"
+              value={empleadoEditar?.nombre || ""}
+              onChange={(v) =>
+                setEmpleadoEditar({
+                  ...empleadoEditar,
+                  nombre: v
+                })
+              }
+            />
+
+            <Input
+              label="Valor Día"
+              type="number"
+              value={empleadoEditar?.valorDia || ""}
+              onChange={(v) =>
+                setEmpleadoEditar({
+                  ...empleadoEditar,
+                  valorDia: v
+                })
+              }
+            />
+
+            <div
+              style={{
+                display: "flex",
+                gap: "10px",
+                marginTop: "20px"
+              }}
+            >
+              <button
+                style={btnGuardar}
+                onClick={actualizarEmpleado}
+              >
+                Guardar
+              </button>
+
+              <button
+                style={btnCancelar}
+                onClick={() => setMostrarEditarEmpleado(false)}
+              >
+                Cancelar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL INFORME QUINCENAL */}
+              {mostrarInforme && (
+                <div style={overlayStyle}>
+                  <div style={modalPro}>
+                    <h2
+                      style={{
+                        marginTop: 0,
+                        color: "#000",
+                        fontSize: "24px",
+                        fontWeight: "800"
+                      }}
+                    >
+                      📊 Informe Quincenal
+                    </h2>
+
+                    <p
+                      style={{
+                        color: "#64748b",
+                        marginBottom: "20px"
+                      }}
+                    >
+                      ¿La nómina está completa?
+                    </p>
+
+                    <div
+                      style={{
+                        display: "flex",
+                        flexDirection: "column",
+                        gap: "10px"
+                      }}
+                    >
+                      <button
+                        style={btnGuardar}
+                        onClick={() =>{
+                          generarNominaCompleta()
+                        }}
+                      >
+                        ✅ Sí
+                      </button>
+
+                      <button
+                        style={btnCancelar}
+                        onClick={() => {
+                           setMostrarInforme(false)
+                           setMostrarFaltas(true)
+                        }}
+                      >
+                        ❌ No
+                      </button>
+
+                      <button
+                        style={btnCancelar}
+                        onClick={() => setMostrarInforme(false)}
+                      >
+                        Cerrar
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+
+    {mostrarFaltas && (
+          <div style={overlayStyle}>
+            <div
+              style={{
+                ...modalPro,
+                maxWidth: "600px",
+                color: "#000"
+              }}
+            >
+              <h2 style={{ marginTop: 0, color: "#000", fontSize: "22px", fontWeight: "900" }}>
+                ⚖️ Ajuste de Días
+              </h2>
+
+              <p style={{ color: "#64748b", marginBottom: "20px", fontSize: "14px" }}>
+                Modifica los días de la catorcena base (14 días).
+              </p>
+
+              {/* Encabezados de columnas */}
+              <div style={{ display: "flex", justifyContent: "space-between", paddingBottom: "10px", borderBottom: "2px solid #e2e8f0", marginBottom: "10px", fontWeight: "800", fontSize: "11px", color: "#94a3b8", textTransform: "uppercase" }}>
+                <div style={{ width: "40%" }}>Empleado</div>
+                <div style={{ width: "25%", textAlign: "center" }}>Faltas (-)</div>
+                <div style={{ width: "25%", textAlign: "center" }}>Extras (+)</div>
+              </div>
+
+              <div
+                style={{
+                  maxHeight: "450px",
+                  overflowY: "auto",
+                  paddingRight: "5px"
+                }}
+              >
+                {empleados
+                  .filter(emp => emp.activo)
+                  .map(emp => (
+                    <div
+                      key={emp.id}
+                      style={{
+                        display: "flex",
+                        justifyContent: "space-between",
+                        alignItems: "center",
+                        padding: "12px 0",
+                        borderBottom: "1px solid #f1f5f9"
+                      }}
+                    >
+                      <strong style={{ color: "#0f172a", width: "40%", fontSize: "13px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                        {emp.nombre}
+                      </strong>
+
+                      {/* Input de Faltas */}
+                      <div style={{ width: "25%", textAlign: "center" }}>
+                        <input
+                          type="number"
+                          min="0"
+                          max="14"
+                          placeholder="0"
+                          value={faltas[emp.id] || ""}
+                          onChange={(e) => setFaltas({ ...faltas, [emp.id]: e.target.value })}
+                          style={{
+                            width: "60px",
+                            padding: "8px",
+                            borderRadius: "8px",
+                            border: "1px solid #fca5a5",
+                            textAlign: "center",
+                            background: "#fef2f2",
+                            color: "#ef4444",
+                            fontWeight: "bold",
+                            outline: "none"
+                          }}
+                        />
+                      </div>
+
+                      {/* Input de Días Extra */}
+                      <div style={{ width: "25%", textAlign: "center" }}>
+                        <input
+                          type="number"
+                          min="0"
+                          placeholder="0"
+                          value={diasExtra[emp.id] || ""}
+                          onChange={(e) => setDiasExtra({ ...diasExtra, [emp.id]: e.target.value })}
+                          style={{
+                            width: "60px",
+                            padding: "8px",
+                            borderRadius: "8px",
+                            border: "1px solid #6ee7b7",
+                            textAlign: "center",
+                            background: "#ecfdf5",
+                            color: "#10b981",
+                            fontWeight: "bold",
+                            outline: "none"
+                          }}
+                        />
+                      </div>
+                    </div>
+                  ))}
+              </div>
+
+              <div
+                style={{
+                  display: "flex",
+                  gap: "10px",
+                  marginTop: "25px"
+                }}
+              >
+                <button
+                  style={btnGuardar}
+                  onClick={generarNominaConFaltas}
+                >
+                  📊 Generar Informe
+                </button>
+
+                <button
+                  style={btnCancelar}
+                  onClick={() => {
+                    setMostrarFaltas(false)
+                    setFaltas({})     // Limpiamos los campos al cancelar
+                    setDiasExtra({})  // Limpiamos los campos al cancelar
+                  }}
+                >
+                  Cancelar
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+      {mostrarResumenNomina && (
+      <div style={overlayStyle}>
+        <div
+          style={{
+        ...modalPro,
+        maxWidth: "700px",
+        background: "#fff",
+        color: "#000"
+        }}
+        >
+          <h2 style={{ marginTop: 0 }}>
+            📊 Resumen Nómina Quincenal
+          </h2>
+
+          <div
+            style={{
+              maxHeight: "400px",
+              overflowY: "auto"
+            }}
+          >
+            {resumenNomina.map(emp => (
+              <div
+                key={emp.id}
+                style={{
+                  padding: "12px",
+                  borderBottom: "1px solid #000"
+                }}
+              >
+                <strong>{emp.nombre}</strong>
+
+                <div>
+                  Valor día: {formato(emp.valorDia)}
+                </div>
+
+                <div>
+                  Días: {emp.dias}
+                </div>
+
+                <div>
+                  Total: {formato(emp.total)}
+                </div>
+              </div>
+            ))}
+          </div>
+
+          <div
+            style={{
+              marginTop: "20px",
+              padding: "15px",
+              background: "#000",
+              color: "#FFD000",
+              borderRadius: "12px",
+              fontWeight: "900",
+              fontSize: "20px"
+            }}
+          >
+            Total Nómina: {formato(totalResumenNomina)}
+          </div>
+            <div
+              style={{
+              display: "flex",
+              gap: "10px",
+              marginTop: "20px"
+            }}
+          >
+            <button
+              style={btnGuardar}
+              onClick={descargarInformeQuincenal}
+            >
+              📄 Descargar PDF
+            </button>
+
+            <button
+              style={btnCancelar}
+              onClick={() => setMostrarResumenNomina(false)}
+            >
+              Cerrar
+            </button>
+            </div>
+        </div>
+      </div>
+    )}
       </div>
     )
   }

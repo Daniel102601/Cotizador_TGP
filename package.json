@@ -1,8 +1,20 @@
 {
   "name": "cotizador",
-  "private": true,
   "version": "0.0.0",
+  "private": true,
+  "description": "This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.",
+  "homepage": "https://github.com/Daniel102601/Cotizador_TGP#readme",
+  "bugs": {
+    "url": "https://github.com/Daniel102601/Cotizador_TGP/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Daniel102601/Cotizador_TGP.git"
+  },
+  "license": "ISC",
+  "author": "",
   "type": "module",
+  "main": "eslint.config.js",
   "scripts": {
     "dev": "vite",
     "build": "vite build",
@@ -12,6 +24,7 @@
   "dependencies": {
     "@supabase/supabase-js": "^2.103.0",
     "html2canvas": "^1.4.1",
+    "html2pdf.js": "^0.14.0",
     "jspdf": "^4.1.0",
     "react": "^19.2.0",
     "react-dom": "^19.2.0",

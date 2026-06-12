@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react"
 import jsPDF from "jspdf"
+import html2pdf from "html2pdf.js"
 import html2canvas from "html2canvas"
 import "../cotizador.css"
 import CotizacionPDF from "./CotizacionPDF.jsx"
@@ -173,42 +174,63 @@ function Cotizador() {
 
   const generarPDF = async () => {
     const element = document.getElementById("area-pdf")
-    if(!element){
-        alert("Error: No se encontró el área para generar el PDF.")
-        return
-    }
 
     const canvas = await html2canvas(element, {
-      scale: 2,
+      scale: 3,
       useCORS: true
     })
 
     const imgData = canvas.toDataURL("image/png")
+
     const pdf = new jsPDF("p", "mm", "a4")
 
     const pageWidth = 210
     const pageHeight = 297
+
     const imgWidth = pageWidth
-    const imgHeight = (canvas.height * imgWidth) / canvas.width
+    const imgHeight =
+      (canvas.height * imgWidth) /
+      canvas.width
 
-    let position = 0
     let heightLeft = imgHeight
+    let position = 0
 
-    pdf.addImage(imgData, "PNG", 0, position, imgWidth, imgHeight)
+    pdf.addImage(
+      imgData,
+      "PNG",
+      0,
+      position,
+      imgWidth,
+      imgHeight
+    )
+
     heightLeft -= pageHeight
 
     while (heightLeft > 0) {
-      position = heightLeft - imgHeight
+
+      position = -(imgHeight - heightLeft)
+
       pdf.addPage()
-      pdf.addImage(imgData, "PNG", 0, position, imgWidth, imgHeight)
+
+      pdf.addImage(
+        imgData,
+        "PNG",
+        0,
+        position,
+        imgWidth,
+        imgHeight
+      )
+
       heightLeft -= pageHeight
     }
 
-    // Nombre dinámico
-    const nombreLimpio = cliente.nombre ? cliente.nombre.replace(/\s+/g, "_").replace(/[^\w]/g, "") : "Cliente"
-    const nombreArchivo = `${numeroCotizacion}_${nombreLimpio}.pdf`
+    const nombreLimpio = cliente.nombre
+      ? cliente.nombre.replace(/\s+/g, "_")
+      : "Cliente"
 
-    pdf.save(nombreArchivo)
+    pdf.save(
+      `${numeroCotizacion}_${nombreLimpio}.pdf`
+    )
   }
 
   const enviarWhatsApp = async () => {
@@ -323,22 +345,35 @@ function Cotizador() {
 
         <hr />
 
-        <CotizacionPDF
-          numeroCotizacion={numeroCotizacion}
-          fecha={fecha}
-          cliente={cliente}
-          items={items}
-          subtotal={subtotal}
-          administracion={administracion}
-          imprevistos={imprevistos}
-          utilidad={utilidad}
-          iva={iva}
-          totalGeneral={totalGeneral}
-          garantia={garantia}
-          tiempoEntrega={tiempoEntrega}
-          observaciones={observaciones}
-          formatoMoneda={formatoMoneda}
-        />
+        {/* Vista oculta para generar PDF */}
+        <div
+          id="area-pdf"
+          style={{
+            position: "absolute",
+            left: "-9999px",
+            top: 0,
+            width: "800px",
+            backgroundColor: "#ffffff",
+            padding: "20px"
+          }}
+        >
+          <CotizacionPDF
+            numeroCotizacion={numeroCotizacion}
+            fecha={fecha}
+            cliente={cliente}
+            items={items}
+            subtotal={subtotal}
+            administracion={administracion}
+            imprevistos={imprevistos}
+            utilidad={utilidad}
+            iva={iva}
+            totalGeneral={totalGeneral}
+            garantia={garantia}
+            tiempoEntrega={tiempoEntrega}
+            observaciones={observaciones}
+            formatoMoneda={formatoMoneda}
+          />
+        </div>
 
         {/* 🔹 Encabezado */}
         <h1 className="titulo">

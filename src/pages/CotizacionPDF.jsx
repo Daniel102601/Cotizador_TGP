@@ -1,10 +1,10 @@
-import logo from "../assets/logo.png"
+import React from 'react';
 
 function CotizacionPDF({
   numeroCotizacion,
   fecha,
   cliente,
-  items,
+  items = [],
   subtotal,
   administracion,
   imprevistos,
@@ -17,123 +17,101 @@ function CotizacionPDF({
   formatoMoneda
 }) {
   return (
-
-      <div
-        id="area-pdf"
-        style={{
-          width: "794px",           // ancho A4 en px
-          minHeight: "1123px",      // alto A4 en px
-          padding: "50px",
-          backgroundColor: "white",
-          color: "black",
-          fontFamily: "'Arial', sans-serif",
-          margin: "auto",
-          boxSizing: "border-box"
-        }}>
-
-      {/* 🔹 ENCABEZADO EMPRESARIAL */}
-      <div
-        style={{
-          display: "flex",
-          justifyContent: "space-between",
-          alignItems: "center",
-          marginBottom: "20px"
-        }}
-      >
-        <div style={{ display: "flex", alignItems: "center" }}>
-          <img
-            src={logo}
-            alt="Logo TGP"
-            style={{ width: "110px", marginRight: "20px" }}
-          />
-
-          <div>
-            <h2 style={{ margin: 0 }}>CONSTRUCCIONES TGP SAS</h2>
-            <p style={{ margin: 0, fontSize: "13px" }}>
-              DE LA IDEA A LA OBRA
-            </p>
+    <div
+      style={{
+        width: "100%", 
+        maxWidth: "794px", // Ancho exacto de A4 para evitar recortes
+        margin: "0 auto",
+        backgroundColor: "#ffffff",
+        padding: "40px",
+        color: "#000000", // Negro del logo
+        fontFamily: "'Helvetica Neue', Helvetica, Arial, sans-serif",
+        boxSizing: "border-box",
+        lineHeight: "1.5",
+        fontSize: "12px"
+      }}
+    >
+      {/* ENCABEZADO PRINCIPAL */}
+      <div style={{ display: "table", width: "100%", borderBottom: "4px solid #FFCC00", paddingBottom: "20px", marginBottom: "25px", boxSizing: "border-box" }}>
+        
+        {/* Info de la Empresa y Logo */}
+        <div style={{ display: "table-cell", width: "65%", verticalAlign: "middle" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: "15px" }}>
+            {/* Reemplaza la ruta del src con la ruta real de tu logo */}
+            <img 
+              src="/public/logo192.png" 
+              alt="TGP Construcciones Logo" 
+              style={{ width: "80px", height: "auto" }} 
+            />
+            <div>
+              <h1 style={{ margin: 0, fontSize: "24px", fontWeight: "900", color: "#000000", letterSpacing: "-0.5px" }}>
+                CONSTRUCCIONES TGP SAS
+              </h1>
+              <p style={{ margin: "2px 0 8px 0", color: "#FFCC00", fontWeight: "bold", textTransform: "uppercase", fontSize: "10px", letterSpacing: "1px" }}>
+                Soluciones Integrales en Construcción e Infraestructura
+              </p>
+              <div style={{ color: "#333333", fontSize: "10px", lineHeight: "1.4" }}>
+                <p style={{ margin: 0 }}><strong>NIT:</strong> 901.790.921</p>
+                <p style={{ margin: 0 }}><strong>Teléfono:</strong> +57 350 859 8273 | +57 301 6872575</p>
+                <p style={{ margin: 0 }}><strong>Email:</strong> construccionestgp@gmail.com</p>
+              </div>
+            </div>
           </div>
         </div>
 
-        <div style={{ fontSize: "12px", textAlign: "right", lineHeight: "18px" }}>
-          <p style={{ margin: 0 }}><strong>NIT:</strong> 901.790.921-5</p>
-          <p style={{ margin: 0 }}>Bogotá, Colombia</p>
-          <p style={{ margin: 0 }}>350 859 8273 - 301 687 2575</p>
-          <p style={{ margin: 0 }}>
-            tgpconstrucciones@gmail.com
-          </p>
+        {/* Info del Documento */}
+        <div style={{ display: "table-cell", width: "35%", textAlign: "right", verticalAlign: "top" }}>
+          <h2 style={{ margin: 0, fontSize: "26px", fontWeight: "900", color: "#000000", letterSpacing: "1px" }}>
+            COTIZACIÓN
+          </h2>
+          <div style={{ display: "inline-block", marginTop: "10px", textAlign: "left", border: "1px solid #e0e0e0", borderRadius: "6px", overflow: "hidden" }}>
+            <div style={{ backgroundColor: "#000000", color: "#FFCC00", padding: "6px 20px", fontWeight: "bold", fontSize: "14px", textAlign: "center" }}>
+              {numeroCotizacion}
+            </div>
+            <div style={{ padding: "6px 20px", backgroundColor: "#f9f9f9", fontSize: "11px", color: "#000000" }}>
+              <strong>Fecha:</strong> {fecha}
+            </div>
+          </div>
         </div>
       </div>
 
-      <hr style={{ border: "2px solid #FFD000", marginBottom: "25px" }} />
-
-      {/* 🔹 INFORMACIÓN COTIZACIÓN */}
-      <div
-        style={{
-          display: "flex",
-          justifyContent: "space-between",
-          marginBottom: "20px"
-        }}
-      >
-        <div>
-          <p><strong>COTIZACIÓN N°:</strong> {numeroCotizacion}</p>
-        </div>
-        <div>
-          <p><strong>Fecha:</strong> {fecha}</p>
+      {/* INFORMACIÓN DEL CLIENTE */}
+      <div style={{ backgroundColor: "#f9f9f9", border: "1px solid #e0e0e0", borderRadius: "6px", padding: "15px", marginBottom: "25px", boxSizing: "border-box" }}>
+        <h3 style={{ margin: "0 0 10px 0", fontSize: "12px", color: "#000000", fontWeight: "bold", borderBottom: "1px solid #cccccc", paddingBottom: "5px" }}>
+          DATOS DEL CLIENTE / PROYECTO
+        </h3>
+        
+        <div style={{ display: "table", width: "100%", tableLayout: "fixed" }}>
+          <div style={{ display: "table-cell", width: "50%", paddingRight: "10px", lineHeight: "1.6" }}>
+            <div style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}><span style={{ color: "#666666" }}>Cliente:</span> <strong>{cliente?.nombre}</strong></div>
+            <div style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}><span style={{ color: "#666666" }}>NIT/CC:</span> <span>{cliente?.documento}</span></div>
+          </div>
+          <div style={{ display: "table-cell", width: "50%", paddingLeft: "10px", lineHeight: "1.6" }}>
+            <div style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}><span style={{ color: "#666666" }}>Teléfono:</span> <span>{cliente?.telefono}</span></div>
+            <div style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}><span style={{ color: "#666666" }}>Dirección/Obra:</span> <span>{cliente?.direccion}</span></div>
+          </div>
         </div>
       </div>
 
-      <hr />
-
-      {/* 🔹 DATOS CLIENTE */}
-      <h3>Datos del Cliente</h3>
-
-      <div
-        style={{
-          display: "grid",
-          gridTemplateColumns: "1fr 1fr",
-          gap: "10px",
-          marginBottom: "20px"
-        }}
-      >
-        <p><strong>Nombre:</strong> {cliente.nombre}</p>
-        <p><strong>Documento / NIT:</strong> {cliente.documento}</p>
-        <p><strong>Teléfono:</strong> {cliente.telefono}</p>
-        <p><strong>Dirección:</strong> {cliente.direccion}</p>
-      </div>
-
-      <hr />
-
-      {/* 🔹 DETALLE */}
-      <h3>Detalle de la Cotización</h3>
-
-      <table
-        style={{
-          width: "100%",
-          borderCollapse: "collapse",
-          marginTop: "10px"
-        }}
-      >
+      {/* TABLA DE PRESUPUESTO */}
+      <table style={{ width: "100%", borderCollapse: "collapse", marginBottom: "25px", tableLayout: "fixed", boxSizing: "border-box" }}>
         <thead>
-          <tr style={{ backgroundColor: "#f2f2f2" }}>
-            <th style={thStyle}>Item</th>
-            <th style={thStyle}>Descripción</th>
-            <th style={thStyle}>Cant</th>
-            <th style={thStyle}>V. Unit</th>
-            <th style={thStyle}>Total</th>
+          <tr>
+            <th style={{ ...thStyle, width: "6%", textAlign: "center" }}>#</th>
+            <th style={{ ...thStyle, width: "46%", textAlign: "left" }}>Descripción de Actividades</th>
+            <th style={{ ...thStyle, width: "10%", textAlign: "center" }}>Cant.</th>
+            <th style={{ ...thStyle, width: "19%", textAlign: "right" }}>Val. Unitario</th>
+            <th style={{ ...thStyle, width: "19%", textAlign: "right" }}>Total</th>
           </tr>
         </thead>
-
         <tbody>
           {items.map((item, index) => (
-            <tr key={index}>
-              <td style={tdCenter}>{index + 1}</td>
-              <td style={tdLeft}>{item.descripcion}</td>
-              <td style={tdCenter}>{item.cantidad}</td>
-              <td style={tdRight}>
-                {formatoMoneda(item.valorUnitario)}
-              </td>
-              <td style={tdRight}>
+            <tr key={index} style={{ backgroundColor: index % 2 === 0 ? "#ffffff" : "#f9f9f9" }}>
+              <td style={{ ...tdStyle, textAlign: "center", color: "#666666" }}>{index + 1}</td>
+              <td style={{ ...tdStyle, fontWeight: "500" }}>{item.descripcion}</td>
+              <td style={{ ...tdStyle, textAlign: "center" }}>{item.cantidad}</td>
+              <td style={{ ...tdStyle, textAlign: "right" }}>{formatoMoneda(item.valorUnitario)}</td>
+              <td style={{ ...tdStyle, textAlign: "right", fontWeight: "bold", color: "#000000" }}>
                 {formatoMoneda(item.cantidad * item.valorUnitario)}
               </td>
             </tr>
@@ -141,88 +119,105 @@ function CotizacionPDF({
         </tbody>
       </table>
 
-      <hr style={{ margin: "30px 0" }} />
-
-      {/* 🔹 RESUMEN FINANCIERO ALINEADO DERECHA */}
-      <div style={{ width: "320px", marginLeft: "auto" }}>
-        {resumenItem("Subtotal", subtotal)}
-        {resumenItem("Administración", administracion)}
-        {resumenItem("Imprevistos", imprevistos)}
-        {resumenItem("Utilidad", utilidad)}
-        {resumenItem("IVA", iva)}
-
-        <hr />
-
-        <div
-          style={{
-            display: "flex",
-            justifyContent: "space-between",
-            fontWeight: "bold",
-            fontSize: "18px"
-          }}
-        >
-          <span>Total General</span>
-          <span>{formatoMoneda(totalGeneral)}</span>
+      {/* BLOQUE DE LIQUIDACIÓN / RESUMEN AIU */}
+      <div style={{ display: "table", width: "100%", marginTop: "15px", boxSizing: "border-box" }}>
+        {/* Espacio izquierdo libre */}
+        <div style={{ display: "table-cell", width: "45%" }}></div>
+        
+        {/* Cuadro de Totales */}
+        <div style={{ display: "table-cell", width: "55%", verticalAlign: "top" }}>
+          <div style={{ border: "1px solid #e0e0e0", borderRadius: "6px", overflow: "hidden" }}>
+            <ResumenFila label="Costo Directo (Subtotal)" valor={formatoMoneda(subtotal)} />
+            <ResumenFila label="Administración" valor={formatoMoneda(administracion)} />
+            <ResumenFila label="Imprevistos" valor={formatoMoneda(imprevistos)} />
+            <ResumenFila label="Utilidad" valor={formatoMoneda(utilidad)} />
+            <ResumenFila label="IVA sobre Utilidad" valor={formatoMoneda(iva)} />
+            
+            <div
+              style={{
+                backgroundColor: "#000000",
+                color: "#ffffff",
+                padding: "12px 15px",
+                fontWeight: "bold",
+                fontSize: "16px",
+                display: "table",
+                width: "100%",
+                boxSizing: "border-box"
+              }}
+            >
+              <div style={{ display: "table-cell", textAlign: "left" }}>TOTAL GENERAL</div>
+              <div style={{ display: "table-cell", textAlign: "right", color: "#FFCC00" }}>
+                {formatoMoneda(totalGeneral)}
+              </div>
+            </div>
+          </div>
         </div>
       </div>
 
-      <hr style={{ margin: "30px 0" }} />
-
-      {/* 🔹 CONDICIONES */}
-      <h3>Condiciones Comerciales</h3>
-      <p><strong>VALIDEZ:</strong> 5-6 días hábiles</p>
-      <p>
-        <strong>PAGO:</strong> Efectivo o cuenta 108 0000 7115 - Bancolombia
-      </p>
-      <p><strong>Garantía:</strong> {garantia}</p>
-      <p><strong>Tiempo de entrega:</strong> {tiempoEntrega}</p>
-      <p><strong>Observaciones:</strong> {observaciones}</p>
-
-      <hr />
-
-      {/* 🔹 PIE */}
-      <div style={{ marginTop: "40px", fontSize: "12px", textAlign: "center" }}>
-        <p>TGP Construcciones SAS · Colombia</p>
-        <p>Gracias por confiar en nosotros</p>
+      {/* CONDICIONES COMERCIALES */}
+      <div style={{ marginTop: "30px", backgroundColor: "#f9f9f9", borderRadius: "6px", padding: "15px", border: "1px solid #e0e0e0", boxSizing: "border-box" }}>
+        <h4 style={{ margin: "0 0 8px 0", fontSize: "11px", color: "#000000", fontWeight: "bold" }}>
+          CONDICIONES TÉCNICAS Y COMERCIALES
+        </h4>
+        <div style={{ fontSize: "10px", color: "#333333", lineHeight: "1.5" }}>
+          <div style={{ marginBottom: "3px" }}>• <strong>Validez de la oferta:</strong> 15 días calendario a partir de la fecha.</div>
+          <div style={{ marginBottom: "3px" }}>• <strong>Garantía de obra:</strong> {garantia || "12 meses en estabilidad de obra civil."}</div>
+          <div style={{ marginBottom: "3px" }}>• <strong>Tiempo de ejecución:</strong> {tiempoEntrega || "A convenir según acta de inicio."}</div>
+          
+          {observaciones && (
+            <div style={{ marginTop: "10px" }}>
+              <strong>Notas adicionales:</strong>
+              <div style={{ whiteSpace: "pre-line", marginTop: "4px", padding: "8px", backgroundColor: "#ffffff", borderRadius: "4px", border: "1px solid #e0e0e0", color: "#666666" }}>
+                {observaciones}
+              </div>
+            </div>
+          )}
+        </div>
       </div>
 
+      {/* PIE DE PÁGINA */}
+      <div style={{ marginTop: "20px", textAlign: "center", borderTop: "2px solid #FFCC00", paddingTop: "12px", color: "#666666", fontSize: "10px" }}>
+        Construimos confianza, calidad y futuro.
+      </div>
     </div>
-  )
-
-  function resumenItem(label, value) {
-    return (
-      <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "5px" }}>
-        <span>{label}</span>
-        <span>{formatoMoneda(value)}</span>
-      </div>
-    )
-  }
+  );
 }
 
-/* 🔹 ESTILOS TABLA */
+/* ESTILOS AUXILIARES */
+
 const thStyle = {
-  padding: "8px",
-  border: "1px solid #ccc",
-  textAlign: "center",
-  fontWeight: "bold"
-}
+  backgroundColor: "#000000", 
+  color: "#FFCC00", // Letras amarillas en fondo negro para resaltar
+  padding: "8px 10px",
+  fontSize: "10px",
+  fontWeight: "bold",
+  textTransform: "uppercase",
+  border: "none"
+};
 
-const tdLeft = {
-  padding: "8px",
-  border: "1px solid #ccc",
-  textAlign: "left"
-}
+const tdStyle = {
+  padding: "10px",
+  borderBottom: "1px solid #e0e0e0",
+  fontSize: "11px",
+  verticalAlign: "middle",
+  wordWrap: "break-word"
+};
 
-const tdCenter = {
-  padding: "8px",
-  border: "1px solid #ccc",
-  textAlign: "center"
-}
+const ResumenFila = ({ label, valor }) => (
+  <div
+    style={{
+      display: "table",
+      width: "100%",
+      padding: "8px 15px",
+      borderBottom: "1px solid #e0e0e0",
+      fontSize: "11px",
+      backgroundColor: "#ffffff",
+      boxSizing: "border-box"
+    }}
+  >
+    <div style={{ display: "table-cell", textAlign: "left", color: "#333333" }}>{label}</div>
+    <div style={{ display: "table-cell", textAlign: "right", fontWeight: "bold", color: "#000000" }}>{valor}</div>
+  </div>
+);
 
-const tdRight = {
-  padding: "8px",
-  border: "1px solid #ccc",
-  textAlign: "right"
-}
-
-export default CotizacionPDF
+export default CotizacionPDF;
